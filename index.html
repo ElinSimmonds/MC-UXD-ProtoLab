@@ -42,14 +42,28 @@
             { shortcode: 'bye', title: 'Farewell', content: 'Thank you for contacting us today. Is there anything else I can help you with before you go?' },
         ];
 
-        const shortcutOptions = [
-            { id: 'canned', icon: 'MessageSquare', label: 'Canned Responses', shortcode: 'c', searchable: true, nestedItems: cannedResponses },
-            { id: 'attach', icon: 'Paperclip', label: 'Add Attachment', shortcode: 'file' },
-            { id: 'call', icon: 'PhoneCall', label: 'Call Customer', shortcode: 'call' },
-            { id: 'new', icon: 'UserPlus', label: 'New Interaction', shortcode: 'new' },
-            { id: 'end', icon: 'LogOut', label: 'End Interaction', shortcode: 'end' },
-            { id: 'note', icon: 'StickyNote', label: 'Add Note', shortcode: 'note' },
-        ];
+     const cannedResponses = [
+  { shortcode: 'greet', title: 'General Greeting', content: 'Hello! Thank you for contacting our support center. How may I assist you today?' },
+  { shortcode: 'hi', title: 'Casual Greeting', content: 'Hi there! Welcome to our support center. What can I help you with?' },
+  { shortcode: 'hello', title: 'Friendly Greeting', content: 'Hello and welcome! I\'m here to assist you. What brings you to our support center today?' },
+  { shortcode: 'morning', title: 'Morning Greeting', content: 'Good morning! Thank you for reaching out to us. How can I make your day better?' },
+  { shortcode: 'afternoon', title: 'Afternoon Greeting', content: 'Good afternoon! I hope your day is going well. What can I assist you with?' },
+  { shortcode: 'evening', title: 'Evening Greeting', content: 'Good evening! Thank you for contacting us. How may I be of help?' },
+  { shortcode: 'bye', title: 'Farewell', content: 'Thank you for contacting us today. Is there anything else I can help you with before you go?' },
+  { shortcode: 'hold', title: 'Putting on Hold', content: 'I apologize, but I\'ll need to put you on a brief hold while I look into this for you. It should only take a few moments. Is that alright?' },
+  { shortcode: 'callback', title: 'Offer Callback', content: 'I understand that your time is valuable. If you prefer, I can arrange for one of our specialists to call you back within the next 2 hours. Would that work better for you?' },
+  { shortcode: 'escalate', title: 'Escalation Notice', content: 'I apologize, but I\'ll need to escalate this to our specialized team. They have more in-depth knowledge about this particular issue and will be able to assist you better.' },
+  { shortcode: 'techissue', title: 'Technical Issue', content: 'I understand you\'re experiencing a technical issue. Can you please provide more details about what you\'re seeing? Any error messages or unusual behavior you\'ve noticed would be helpful.' },
+  { shortcode: 'billing', title: 'Billing Inquiry', content: 'I\'d be happy to help you with your billing inquiry. For your security, could you please verify your account information? Once that\'s done, I\'ll be able to access your billing details and address your concerns.' },
+  { shortcode: 'upgrade', title: 'Service Upgrade', content: 'I\'m excited to hear you\'re interested in upgrading your service! I\'d be happy to walk you through our available options and help you choose the best upgrade path based on your needs and usage patterns.' },
+  { shortcode: 'downgrade', title: 'Service Downgrade', content: 'I understand you\'re considering downgrading your service. Before we proceed, may I ask about your reasons for downgrading? We might have solutions or alternatives that could better meet your needs while providing more value.' },
+  { shortcode: 'cancel', title: 'Cancellation Request', content: 'I\'m sorry to hear you\'re considering cancelling your service. Before we proceed with the cancellation, could you share the reason for your decision? We value your feedback and might be able to offer a solution that addresses your concerns.' },
+  { shortcode: 'refund', title: 'Refund Request', content: 'I apologize for any inconvenience you\'ve experienced. I\'d be happy to look into your refund request. Could you please provide me with more details about the purchase and the reason for the refund?' },
+  { shortcode: 'shipping', title: 'Shipping Inquiry', content: 'I\'d be glad to help you with your shipping inquiry. Could you please provide your order number? With that, I\'ll be able to check the current status and estimated delivery date for your package.' },
+  { shortcode: 'product', title: 'Product Information', content: 'I\'d be happy to provide you with more information about our products. Which specific product or feature are you interested in learning more about?' },
+  { shortcode: 'compare', title: 'Product Comparison', content: 'Comparing products can definitely help in making the right choice. Which specific products would you like me to compare for you? I can highlight the key differences and similarities to help you make an informed decision.' },
+  { shortcode: 'warranty', title: 'Warranty Information', content: 'I\'d be glad to help you with warranty information. Could you please specify which product you\'re inquiring about? Once I have that information, I can provide you with the specific warranty terms and coverage details.' },
+];
 
         // Main component
         const DiscoverableSearchableShortcutUI = () => {
