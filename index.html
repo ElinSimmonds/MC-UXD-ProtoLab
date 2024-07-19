@@ -6,6 +6,27 @@
     <title>UI Prototypes</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+    <script>
+(function (m, a, z, e) {
+  var s, t;
+  try {
+    t = m.sessionStorage.getItem('maze-us');
+  } catch (err) {}
+
+  if (!t) {
+    t = new Date().getTime();
+    try {
+      m.sessionStorage.setItem('maze-us', t);
+    } catch (err) {}
+  }
+
+  s = a.createElement('script');
+  s.src = z + '?apiKey=' + e;
+  s.async = true;
+  a.getElementsByTagName('head')[0].appendChild(s);
+  m.mazeUniversalSnippetApiKey = e;
+})(window, document, 'https://snippet.maze.co/maze-universal-loader.js', '41ca5d4c-589d-4c91-b4fa-b5d50996dbe8');
+</script>
 <body class="bg-gray-100 p-8">
     <div class="max-w-3xl mx-auto">
         <h1 class="text-3xl font-bold mb-6">UI Prototypes</h1>
