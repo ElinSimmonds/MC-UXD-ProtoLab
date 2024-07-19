@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discoverable Searchable Shortcut UI</title>
+    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+    <!-- Maze tag placeholder - Replace with your actual Maze tag -->
+    <script>
+        // Paste your Maze tag here
+    </script>
+</head>
+<body>
+    <div id="discoverable-shortcut-ui-root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { Command, MessageSquare, Paperclip, PhoneCall, UserPlus, LogOut, StickyNote, ChevronRight } = lucide;
+
+        const cannedResponses = [
+            { shortcode: 'greet', title: 'General Greeting', content: 'Hello! Thank you for contacting our support center. How may I assist you today?' },
+            { shortcode: 'hi', title: 'Casual Greeting', content: 'Hi there! Welcome to our support center. What can I help you with?' },
+            { shortcode: 'bye', title: 'Farewell', content: 'Thank you for contacting us today. Is there anything else I can help you with before you go?' },
+        ];
+
+        const shortcutOptions = [
+            { id: 'canned', icon: MessageSquare, label: 'Canned Responses', shortcode: 'c', searchable: true, nestedItems: cannedResponses },
+            { id: 'attach', icon: Paperclip, label: 'Add Attachment', shortcode: 'file' },
+            { id: 'call', icon: PhoneCall, label: 'Call Customer', shortcode: 'call' },
+            { id: 'new', icon: UserPlus, label: 'New Interaction', shortcode: 'new' },
+            { id: 'end', icon: LogOut, label: 'End Interaction', shortcode: 'end' },
+            { id: 'note', icon: StickyNote, label: 'Add Note', shortcode: 'note' },
+        ];
+
+        const DiscoverableSearchableShortcutUI = () => {
+            const [inputValue, setInputValue] = useState('');
+            const [isSearching, setIsSearching] = useState(false);
+            const [searchResults, setSearchResults] = useState([]);
+            const [selectedIndex, setSelectedIndex] = useState(-1);
+            const [previewContent, setPreviewContent] = useState('');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isInCannedResponses, setIsInCannedResponses] = useState(false);
+            const inputRef = useRef(null);
+            const popoverRef = useRef(null);
+            const previewRef = useRef(null);
+            const listRef = useRef(null);
+
+            useEffect(() => {
+                if (listRef.current && selectedIndex !== -1) {
+                    const element = listRef.current.children[selectedIndex];
+                    if (element) {
+                        element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            }, [selectedIndex]);
+
+            const searchShortcuts = (query) => {
+                if (isInCannedResponses) {
+                    return cannedResponses.filter(item =>
+                        item.shortcode.includes(query) || item.title.toLowerCase().includes(query.toLowerCase())
+                    ).map(item => ({ ...item, type: 'nested' }));
+                } else {
+                    return shortcutOptions.filter(option =>
+                        option.shortcode.includes(query) || option.label.toLowerCase().includes(query.toLowerCase())
+                    ).map(option => ({ ...option, type: 'shortcut' }));
+                }
+            };
+
+            const handleInputChange = (e) => {
+                const value = e.target.value;
+                setInputValue(value);
+
+                if (value.endsWith('/')) {
+                    setIsSearching(true);
+                    setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                    setSelectedIndex(0);
+                    setPreviewContent(getPreviewContent(shortcutOptions[0]));
+                    setSearchTerm('');
+                    setIsInCannedResponses(false);
+                } else if (value.includes('/')) {
+                    const newSearchTerm = value.split('/')[1].toLowerCase();
+                    setSearchTerm(newSearchTerm);
+                    if (newSearchTerm) {
+                        setIsSearching(true);
+                        const results = searchShortcuts(newSearchTerm);
+                        setSearchResults(results);
+                        setSelectedIndex(results.length > 0 ? 0 : -1);
+                        setPreviewContent(results.length > 0 ? getPreviewContent(results[0]) : '');
+                    } else {
+                        setIsSearching(true);
+                        setSearchResults(isInCannedResponses ? cannedResponses.map(item => ({ ...item, type: 'nested' })) : shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                        setSelectedIndex(0);
+                        setPreviewContent(getPreviewContent(isInCannedResponses ? cannedResponses[0] : shortcutOptions[0]));
+                    }
+                } else {
+                    setIsSearching(false);
+                    setSearchResults([]);
+                    setSelectedIndex(-1);
+                    setPreviewContent('');
+                    setSearchTerm('');
+                    setIsInCannedResponses(false);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (searchResults.length === 0) return;
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        setSelectedIndex((prevIndex) => {
+                            const nextIndex = prevIndex < searchResults.length - 1 ? prevIndex + 1 : prevIndex;
+                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                            return nextIndex;
+                        });
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        setSelectedIndex((prevIndex) => {
+                            const nextIndex = prevIndex > 0 ? prevIndex - 1 : prevIndex;
+                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                            return nextIndex;
+                        });
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex !== -1) {
+                            handleSelectItem(searchResults[selectedIndex]);
+                        }
+                        break;
+                    case 'Escape':
+                        if (isInCannedResponses) {
+                            setIsInCannedResponses(false);
+                            setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                            setSelectedIndex(0);
+                        } else {
+                            setSearchResults([]);
+                            setSelectedIndex(-1);
+                            setPreviewContent('');
+                            setIsSearching(false);
+                            setSearchTerm('');
+                        }
+                        break;
+                }
+            };
+
+            const getPreviewContent = (item) => {
+                if (item.type === 'nested') {
+                    return item.content;
+                } else if (item.type === 'shortcut') {
+                    return `Execute action: ${item.label}`;
+                }
+                return '';
+            };
+
+            const handleSelectItem = (item) => {
+                if (item.type === 'nested') {
+                    setInputValue(inputValue.split('/')[0] + item.content);
+                    setSearchResults([]);
+                    setSelectedIndex(-1);
+                    setPreviewContent('');
+                    setIsSearching(false);
+                    setIsInCannedResponses(false);
+                } else if (item.type === 'shortcut') {
+                    if (item.id === 'canned') {
+                        setIsInCannedResponses(true);
+                        setSearchResults(item.nestedItems.map(nestedItem => ({ ...nestedItem, type: 'nested' })));
+                        setSelectedIndex(0);
+                        setPreviewContent(item.nestedItems[0].content);
+                        setIsSearching(true);
+                    } else {
+                        alert(`Executing action: ${item.label}`);
+                        setSearchResults([]);
+                        setSelectedIndex(-1);
+                        setPreviewContent('');
+                        setIsSearching(false);
+                    }
+                }
+                setSearchTerm('');
+                inputRef.current?.focus();
+            };
+
+            const highlightMatch = (text, highlight) => {
+                if (!highlight.trim()) {
+                    return <span>{text}</span>;
+                }
+                const regex = new RegExp(`(${highlight})`, 'gi');
+                const parts = text.split(regex);
+                return (
+                    <span>
+                        {parts.map((part, i) => 
+                            regex.test(part) ? (
+                                <span key={i} className="font-bold text-gray-800">
+                                    {part}
+                                </span>
+                            ) : (
+                                <span key={i}>{part}</span>
+                            )
+                        )}
+                    </span>
+                );
+            };
+
+            const renderSearchResults = () => (
+                <div ref={popoverRef} className="absolute z-10 w-full mt-2 bg-white border rounded-md shadow-lg">
+                    {isInCannedResponses && (
+                        <div className="p-2 font-semibold text-gray-700 border-b">
+                            Shortcuts {'>'} Canned Responses
+                        </div>
+                    )}
+                    <ul ref={listRef} className="max-h-60 overflow-y-auto">
+                        {searchResults.map((item, index) => (
+                            <li
+                                key={index}
+                                className={`p-2 cursor-pointer transition-colors duration-150 
+                                    ${index === selectedIndex ? 'bg-blue-100' : 'hover:bg-gray-100'}
+                                    ${item.type === 'nested' ? 'pl-6' : ''}`}
+                                onClick={() => handleSelectItem(item)}
+                                onMouseEnter={() => {
+                                    setSelectedIndex(index);
+                                    setPreviewContent(getPreviewContent(item));
+                                }}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        {item.type === 'shortcut' && <item.icon className="mr-2" size={16} />}
+                                        <span className={item.type === 'nested' ? 'text-sm' : 'font-semibold'}>
+                                            {item.type === 'nested' ? item.title : item.label}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                                            /{highlightMatch(item.shortcode, searchTerm)}
+                                        </span>
+                                        {item.id === 'canned' && <ChevronRight size={16} className="ml-2 text-gray-400" />}
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="py-1 px-2 text-xs text-gray-500 border-t">
+                        Use ↑↓ to navigate, Enter to select, Esc to go back
+                    </div>
+                </div>
+            );
+
+            const renderPreview = () => (
+                <div 
+                    ref={previewRef}
+                    className="absolute left-full ml-2 w-64 p-2 bg-white border rounded-md shadow-lg"
+                    style={{ top: popoverRef.current?.offsetTop }}
+                >
+                    <h4 className="font-bold mb-1">Preview:</h4>
+                    <p className="text-sm">{previewContent}</p>
+                </div>
+            );
+
+            return (
+                <div className="relative w-full max-w-md mx-auto mt-10">
+                    <textarea
+                        ref={inputRef}
+                        className="w-full p-2 border rounded-md"
+                        rows={4}
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type / to access shortcuts or canned responses"
+                    />
+                    {isSearching && renderSearchResults()}
+                    {previewContent && renderPreview()}
+                    <Command className="absolute top-2 right-2 text-gray-400" size={20} />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<DiscoverableSearchableShortcutUI />, document.getElementById('discoverable-shortcut-ui-root'));
+    </script>
+</body>
+</html>
