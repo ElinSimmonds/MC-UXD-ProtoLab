@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discoverable Searchable Shortcut UI</title>
+    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Maze tag placeholder - Replace with your actual Maze tag -->
+    <script>
+        // Paste your Maze tag here
+    </script>
+</head>
+<body>
+    <div id="discoverable-shortcut-ui-root"></div>
+    
+    <script type="text/babel">
+        // Card and CardContent components
+        const Card = ({ children, className, ...props }) => <div className={`border rounded-md shadow-sm ${className}`} {...props}>{children}</div>;
+        const CardContent = ({ children, className, ...props }) => <div className={`p-4 ${className}`} {...props}>{children}</div>;
+
+        // Icon component
+        const Icon = ({ name }) => {
+            const icons = {
+                Command: '⌘',
+                MessageSquare: '💬',
+                Paperclip: '📎',
+                PhoneCall: '📞',
+                UserPlus: '➕👤',
+                LogOut: '🚪',
+                StickyNote: '📝'
+            };
+            return <span role="img" aria-label={name}>{icons[name] || '?'}</span>;
+        };
+
+        // Canned responses and shortcut options
+        const cannedResponses = [
+            { shortcode: 'greet', title: 'General Greeting', content: 'Hello! Thank you for contacting our support center. How may I assist you today?' },
+            { shortcode: 'hi', title: 'Casual Greeting', content: 'Hi there! Welcome to our support center. What can I help you with?' },
+            { shortcode: 'bye', title: 'Farewell', content: 'Thank you for contacting us today. Is there anything else I can help you with before you go?' },
+        ];
+
+        const shortcutOptions = [
+            { id: 'canned', icon: 'MessageSquare', label: 'Canned Responses', shortcode: 'c', searchable: true, nestedItems: cannedResponses },
+            { id: 'attach', icon: 'Paperclip', label: 'Add Attachment', shortcode: 'file' },
+            { id: 'call', icon: 'PhoneCall', label: 'Call Customer', shortcode: 'call' },
+            { id: 'new', icon: 'UserPlus', label: 'New Interaction', shortcode: 'new' },
+            { id: 'end', icon: 'LogOut', label: 'End Interaction', shortcode: 'end' },
+            { id: 'note', icon: 'StickyNote', label: 'Add Note', shortcode: 'note' },
+        ];
+
+        // Main component
+        const DiscoverableSearchableShortcutUI = () => {
+            const [inputValue, setInputValue] = React.useState('');
+            const [isSearching, setIsSearching] = React.useState(false);
+            const [searchResults, setSearchResults] = React.useState([]);
+            const [selectedIndex, setSelectedIndex] = React.useState(-1);
+            const [previewContent, setPreviewContent] = React.useState('');
+            const [searchTerm, setSearchTerm] = React.useState('');
+            const inputRef = React.useRef(null);
+            const popoverRef = React.useRef(null);
+            const previewRef = React.useRef(null);
+            const listRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (listRef.current && selectedIndex !== -1) {
+                    const element = listRef.current.children[selectedIndex];
+                    if (element) {
+                        element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            }, [selectedIndex]);
+
+            const searchShortcuts = (query) => {
+                const results = [];
+                shortcutOptions.forEach(option => {
+                    if (option.shortcode.includes(query) || option.label.toLowerCase().includes(query)) {
+                        results.push({ ...option, type: 'shortcut' });
+                    }
+                    if (option.searchable && option.nestedItems) {
+                        const nestedResults = option.nestedItems.filter(item =>
+                            item.shortcode.includes(query) || item.title.toLowerCase().includes(query)
+                        );
+                        results.push(...nestedResults.map(item => ({ ...item, type: 'nested', parentId: option.id })));
+                    }
+                });
+                return results;
+            };
+
+            const handleInputChange = (e) => {
+                const value = e.target.value;
+                setInputValue(value);
+
+                if (value.endsWith('/')) {
+                    setIsSearching(false);
+                    setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                    setSelectedIndex(0);
+                    setPreviewContent(getPreviewContent(shortcutOptions[0]));
+                    setSearchTerm('');
+                } else if (value.includes('/')) {
+                    const newSearchTerm = value.split('/')[1].toLowerCase();
+                    setSearchTerm(newSearchTerm);
+                    if (newSearchTerm) {
+                        setIsSearching(true);
+                        const results = searchShortcuts(newSearchTerm);
+                        setSearchResults(results);
+                        setSelectedIndex(results.length > 0 ? 0 : -1);
+                        setPreviewContent(results.length > 0 ? getPreviewContent(results[0]) : '');
+                    } else {
+                        setIsSearching(false);
+                        setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                        setSelectedIndex(0);
+                        setPreviewContent(getPreviewContent(shortcutOptions[0]));
+                    }
+                } else {
+                    setIsSearching(false);
+                    setSearchResults([]);
+                    setSelectedIndex(-1);
+                    setPreviewContent('');
+                    setSearchTerm('');
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (searchResults.length === 0) return;
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        setSelectedIndex((prevIndex) => {
+                            const nextIndex = prevIndex < searchResults.length - 1 ? prevIndex + 1 : prevIndex;
+                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                            return nextIndex;
+                        });
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        setSelectedIndex((prevIndex) => {
+                            const nextIndex = prevIndex > 0 ? prevIndex - 1 : prevIndex;
+                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                            return nextIndex;
+                        });
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex !== -1) {
+                            handleSelectItem(searchResults[selectedIndex]);
+                        }
+                        break;
+                    case 'Escape':
+                        setSearchResults([]);
+                        setSelectedIndex(-1);
+                        setPreviewContent('');
+                        setIsSearching(false);
+                        setSearchTerm('');
+                        break;
+                }
+            };
+
+            const getPreviewContent = (item) => {
+                if (item.type === 'nested') {
+                    return item.content;
+                } else if (item.type === 'shortcut') {
+                    return `Execute action: ${item.label}`;
+                }
+                return '';
+            };
+
+            const handleSelectItem = (item) => {
+                if (item.type === 'nested') {
+                    setInputValue(inputValue.split('/')[0] + item.content);
+                    // Close the panel after selecting a canned response
+                    setSearchResults([]);
+                    setSelectedIndex(-1);
+                    setPreviewContent('');
+                    setIsSearching(false);
+                } else if (item.type === 'shortcut') {
+                    if (item.id === 'canned') {
+                        setSearchResults(item.nestedItems.map(nestedItem => ({ ...nestedItem, type: 'nested', parentId: item.id })));
+                        setSelectedIndex(0);
+                        setPreviewContent(item.nestedItems[0].content);
+                        setIsSearching(true);
+                    } else {
+                        alert(`Executing action: ${item.label}`);
+                        setSearchResults([]);
+                        setSelectedIndex(-1);
+                        setPreviewContent('');
+                        setIsSearching(false);
+                    }
+                }
+                setSearchTerm('');
+                inputRef.current?.focus();
+            };
+
+            const highlightMatch = (text, highlight) => {
+                if (!highlight.trim()) {
+                    return <span>{text}</span>;
+                }
+                const regex = new RegExp(`(${highlight})`, 'gi');
+                const parts = text.split(regex);
+                return (
+                    <span>
+                        {parts.map((part, i) => 
+                            regex.test(part) ? (
+                                <span key={i} className="font-bold text-gray-800">
+                                    {part}
+                                </span>
+                            ) : (
+                                <span key={i}>{part}</span>
+                            )
+                        )}
+                    </span>
+                );
+            };
+
+            const renderSearchResults = () => (
+                <Card ref={popoverRef} className="absolute z-10 w-full mt-2">
+                    <CardContent className="p-0">
+                        <ul ref={listRef} className="max-h-60 overflow-y-auto">
+                            {searchResults.map((item, index) => (
+                                <li
+                                    key={index}
+                                    className={`p-2 cursor-pointer transition-colors duration-150 
+                                        ${index === selectedIndex ? 'bg-blue-100' : 'hover:bg-gray-100'}
+                                        ${item.type === 'nested' ? 'pl-6' : ''}`}
+                                    onClick={() => handleSelectItem(item)}
+                                    onMouseEnter={() => {
+                                        setSelectedIndex(index);
+                                        setPreviewContent(getPreviewContent(item));
+                                    }}
+                                >
+                                    <div className="flex items-center">
+                                        {item.type === 'shortcut' && <Icon name={item.icon} />}
+                                        <span className={item.type === 'nested' ? 'text-sm' : 'font-bold'}>
+                                            {item.type === 'nested' ? item.title : item.label}
+                                        </span>
+                                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full ml-2">
+                                            /{highlightMatch(item.shortcode, searchTerm)}
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="py-1 px-2 text-xs text-gray-500 border-t">
+                            Use ↑↓ to navigate, Enter to select, Esc to close.
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+
+            const renderPreview = () => (
+                <div 
+                    ref={previewRef}
+                    className="absolute left-full ml-2 w-64 p-2 bg-white border rounded-md shadow-lg"
+                    style={{ top: popoverRef.current?.offsetTop }}
+                >
+                    <h4 className="font-bold mb-1">Preview:</h4>
+                    <p className="text-sm">{previewContent}</p>
+                </div>
+            );
+
+            return (
+                <div className="relative w-full max-w-md mx-auto mt-10">
+                    <textarea
+                        ref={inputRef}
+                        className="w-full p-2 border rounded-md"
+                        rows={4}
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type / to access shortcuts or canned responses"
+                    />
+                    {searchResults.length > 0 && renderSearchResults()}
+                    {previewContent && renderPreview()}
+                    <Icon name="Command" className="absolute top-2 right-2 text-gray-400" />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<DiscoverableSearchableShortcutUI />, document.getElementById('discoverable-shortcut-ui-root'));
+    </script>
+</body>
+</html>
