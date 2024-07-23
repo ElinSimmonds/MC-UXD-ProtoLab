@@ -115,82 +115,104 @@
             };
 
             const handleInputChange = (e) => {
-                const value = e.target.value;
-                setInputValue(value);
+    const value = e.target.value;
+    setInputValue(value);
 
-                if (value.endsWith('/')) {
-                    setIsSearching(true);
-                    setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+    if (value.endsWith('/')) {
+        setIsSearching(true);
+        setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+        setSelectedIndex(0);
+        setPreviewContent(getPreviewContent(shortcutOptions[0]));
+        setSearchTerm('');
+        setIsInCannedResponses(false);
+    } else if (value.includes('/')) {
+        const parts = value.split('/');
+        const lastPart = parts[parts.length - 1].toLowerCase();
+        
+        if (isInCannedResponses) {
+            // We're already in canned responses, so search within them
+            setSearchTerm(lastPart);
+            const results = cannedResponses.filter(item =>
+                item.shortcode.includes(lastPart) || item.title.toLowerCase().includes(lastPart)
+            ).map(item => ({ ...item, type: 'nested' }));
+            setSearchResults(results);
+            setSelectedIndex(results.length > 0 ? 0 : -1);
+            setPreviewContent(results.length > 0 ? getPreviewContent(results[0]) : '');
+        } else {
+            // We're in the main shortcut menu
+            setSearchTerm(lastPart);
+            const results = shortcutOptions.filter(option =>
+                option.shortcode.includes(lastPart) || option.label.toLowerCase().includes(lastPart)
+            ).map(option => ({ ...option, type: 'shortcut' }));
+            setSearchResults(results);
+            setSelectedIndex(results.length > 0 ? 0 : -1);
+            setPreviewContent(results.length > 0 ? getPreviewContent(results[0]) : '');
+        }
+    } else {
+        setIsSearching(false);
+        setSearchResults([]);
+        setSelectedIndex(-1);
+        setPreviewContent('');
+        setSearchTerm('');
+        setIsInCannedResponses(false);
+    }
+};
+
+           const handleKeyDown = (e) => {
+    if (searchResults.length === 0) return;
+
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            setSelectedIndex((prevIndex) => {
+                const nextIndex = prevIndex < searchResults.length - 1 ? prevIndex + 1 : prevIndex;
+                setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                return nextIndex;
+            });
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            setSelectedIndex((prevIndex) => {
+                const nextIndex = prevIndex > 0 ? prevIndex - 1 : prevIndex;
+                setPreviewContent(getPreviewContent(searchResults[nextIndex]));
+                return nextIndex;
+            });
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (selectedIndex !== -1) {
+                const selectedItem = searchResults[selectedIndex];
+                if (selectedItem.id === 'canned') {
+                    // Enter canned responses menu
+                    setIsInCannedResponses(true);
+                    setSearchResults(cannedResponses.map(item => ({ ...item, type: 'nested' })));
                     setSelectedIndex(0);
-                    setPreviewContent(getPreviewContent(shortcutOptions[0]));
+                    setPreviewContent(getPreviewContent(cannedResponses[0]));
+                    setInputValue('/c/'); // Set input to '/c/' to allow further typing
                     setSearchTerm('');
-                    setIsInCannedResponses(false);
-                } else if (value.includes('/')) {
-                    const newSearchTerm = value.split('/')[1].toLowerCase();
-                    setSearchTerm(newSearchTerm);
-                    if (newSearchTerm) {
-                        setIsSearching(true);
-                        const results = searchShortcuts(newSearchTerm);
-                        setSearchResults(results);
-                        setSelectedIndex(results.length > 0 ? 0 : -1);
-                        setPreviewContent(results.length > 0 ? getPreviewContent(results[0]) : '');
-                    } else {
-                        setIsSearching(true);
-                        setSearchResults(isInCannedResponses ? cannedResponses.map(item => ({ ...item, type: 'nested' })) : shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
-                        setSelectedIndex(0);
-                        setPreviewContent(getPreviewContent(isInCannedResponses ? cannedResponses[0] : shortcutOptions[0]));
-                    }
                 } else {
-                    setIsSearching(false);
-                    setSearchResults([]);
-                    setSelectedIndex(-1);
-                    setPreviewContent('');
-                    setSearchTerm('');
-                    setIsInCannedResponses(false);
+                    handleSelectItem(selectedItem);
                 }
-            };
-
-            const handleKeyDown = (e) => {
-                if (searchResults.length === 0) return;
-
-                switch (e.key) {
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        setSelectedIndex((prevIndex) => {
-                            const nextIndex = prevIndex < searchResults.length - 1 ? prevIndex + 1 : prevIndex;
-                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
-                            return nextIndex;
-                        });
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        setSelectedIndex((prevIndex) => {
-                            const nextIndex = prevIndex > 0 ? prevIndex - 1 : prevIndex;
-                            setPreviewContent(getPreviewContent(searchResults[nextIndex]));
-                            return nextIndex;
-                        });
-                        break;
-                    case 'Enter':
-                        e.preventDefault();
-                        if (selectedIndex !== -1) {
-                            handleSelectItem(searchResults[selectedIndex]);
-                        }
-                        break;
-                    case 'Escape':
-                        if (isInCannedResponses) {
-                            setIsInCannedResponses(false);
-                            setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
-                            setSelectedIndex(0);
-                        } else {
-                            setSearchResults([]);
-                            setSelectedIndex(-1);
-                            setPreviewContent('');
-                            setIsSearching(false);
-                            setSearchTerm('');
-                        }
-                        break;
-                }
-            };
+            }
+            break;
+        case 'Escape':
+            if (isInCannedResponses) {
+                setIsInCannedResponses(false);
+                setSearchResults(shortcutOptions.map(option => ({ ...option, type: 'shortcut' })));
+                setSelectedIndex(0);
+                setInputValue('/');
+                setSearchTerm('');
+            } else {
+                setSearchResults([]);
+                setSelectedIndex(-1);
+                setPreviewContent('');
+                setIsSearching(false);
+                setSearchTerm('');
+                setInputValue('');
+            }
+            break;
+    }
+};
 
             const getPreviewContent = (item) => {
                 if (item.type === 'nested') {
